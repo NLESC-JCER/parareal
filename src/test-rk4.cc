@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 
     auto ts = linspace<real_t>(0, 15.0, n);
     auto ode = harmonic_oscillator<real_t, vector_t>(omega0, zeta);
-    auto coarse = runge_kutta_4<real_t, vector_t>(ode);
+    auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
     auto fine = iterate_step<real_t, vector_t>(coarse, h); 
     auto y_0 = solve(coarse, vector_t(1.0, 0.0), ts);
 

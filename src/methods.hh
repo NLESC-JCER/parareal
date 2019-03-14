@@ -18,6 +18,27 @@ namespace pint
         };
     }
     // ------ end
+    // ------ begin <<backward-euler-method>>[0]
+    template <typename real_t, typename vector_t>
+    Integral<real_t, vector_t> backward_euler
+        ( ODE<real_t, vector_t> f, real_t abs_err )
+    {
+        return [=]
+            ( vector_t const &y
+            , real_t t_init
+            , real_t t_end ) -> vector_t
+        {
+            vector_t y_next = y, tmp;
+            while (true) {
+                tmp = y + (t_end - t_init) * f(t_end, y_next);
+                if ((tmp - y_next).norm() < abs_err)
+                    return tmp;
+                y_next = tmp;
+                // std::cout << y_next[0] << std::endl;
+            }
+        };
+    }
+    // ------ end
     // ------ begin <<runge-kutta-4-method>>[0]
     template <typename real_t, typename vector_t>
     Integral<real_t, vector_t> runge_kutta_4

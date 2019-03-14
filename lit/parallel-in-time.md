@@ -279,6 +279,40 @@ ODE<real_t, vector_t> harmonic_oscillator
 }
 ```
 
+# Backward Euler method
+
+At large time-steps we suffer from instability in the RK4 method. Maybe, backward Euler can save us here?
+
+Backward Euler is an implicit method, solving the equation
+
+$$y_{i+1} = y_i + h f(t_{i+1}, y_{i+1}).$$
+
+We can arrive at the solution for this equation by means of a fixed-point iteration,
+
+$$y_{{i+1}}^{{[0]}}=y_{k},\quad y_{{i+1}}^{{[j+1]}}=y_{i}+hf(t_{{i+1}},y_{{i+1}}^{{[j]}}).$$
+
+``` {.cpp #backward-euler-method}
+template <typename real_t, typename vector_t>
+Integral<real_t, vector_t> backward_euler
+    ( ODE<real_t, vector_t> f, real_t abs_err )
+{
+    return [=]
+        ( vector_t const &y
+        , real_t t_init
+        , real_t t_end ) -> vector_t
+    {
+        vector_t y_next = y, tmp;
+        while (true) {
+            tmp = y + (t_end - t_init) * f(t_end, y_next);
+            if ((tmp - y_next).norm() < abs_err)
+                return tmp;
+            y_next = tmp;
+            // std::cout << y_next[0] << std::endl;
+        }
+    };
+}
+```
+
 ## Synthesis
 
 ``` {.cpp file=src/methods.hh}
@@ -288,6 +322,7 @@ ODE<real_t, vector_t> harmonic_oscillator
 namespace pint
 {
     <<forward-euler-method>>
+    <<backward-euler-method>>
     <<runge-kutta-4-method>>
     <<parareal-method>>
 }
@@ -382,7 +417,7 @@ int main(int argc, char **argv)
 
     auto ts = linspace<real_t>(0, 15.0, n);
     auto ode = harmonic_oscillator<real_t, vector_t>(omega0, zeta);
-    auto coarse = runge_kutta_4<real_t, vector_t>(ode);
+    auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
     auto fine = iterate_step<real_t, vector_t>(coarse, h); 
     auto y_0 = solve(coarse, vector_t(1.0, 0.0), ts);
 
