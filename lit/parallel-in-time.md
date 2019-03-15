@@ -1,6 +1,7 @@
 ---
 title: Parallel-in-time integration in OpenFOAM
 author: Johan Hidding
+eqnos-plus-name: Equation
 tangle:
     prefix: pint
 ---
@@ -263,7 +264,7 @@ To solve this second order ODE we need to introduce a second variable to solve f
 $$\begin{aligned}
     q' &= p\\
     p' &= -2\zeta \omega_0 p + \omega_0^2 q
-\end{aligned}$$
+\end{aligned}$$ {#eq:harmonic-oscillator}
 
 ``` {.cpp #harmonic-oscillator}
 template <typename real_t, typename vector_t>
@@ -285,7 +286,7 @@ At large time-steps we suffer from instability in the RK4 method. Maybe, backwar
 
 Backward Euler is an implicit method, solving the equation
 
-$$y_{i+1} = y_i + h f(t_{i+1}, y_{i+1}).$$
+$$y_{i+1} = y_i + h f(t_{i+1}, y_{i+1}).$$ {#eq:backward-euler}
 
 We can arrive at the solution for this equation by means of a fixed-point iteration,
 
@@ -312,6 +313,55 @@ Integral<real_t, vector_t> backward_euler
     };
 }
 ```
+
+But this is still not stable for our problem. Knowing the equation we're solving is linear, we can solve backward Euler method directly. Rewriting +@eq:harmonic-oscillator:
+
+$$y' = M y,$$
+
+where $y = (q, p)$ and
+
+$$M = \begin{pmatrix} 0 & 1 \\ -\omega_0^2 & -2 \zeta \omega_0 \end{pmatrix}.$$
+
+Combining that with +@eq:backward-euler gives us
+
+$$y_{i+1} = y_{i} + h M y_{i+1},$$
+
+and
+
+$$(I - h M) y_{i+1} = y_{i},$$
+
+where $I$ is the identity matrix. Remaining to solve the system
+
+$$\begin{pmatrix}1 & -h\\ h\omega_0^2 & 1 + 2h\omega_0 \zeta\end{pmatrix} y_{i+1} = y{i},$$
+
+for each step.
+
+$$\begin{aligned}
+q_{i+1} &= \frac{q_i}{1 + h (1 + p_i / (1 + 2h\omega_0 \zeta))}\\
+p_{i+1} &= \frac{p_i - h\omega_0^2 q_{i+1}}{1 + 2h\omega_0 \zeta}
+\end{aligned}$$
+
+``` {.cpp #backward-euler-harmonic-oscillator}
+template <typename real_t, typename vector_t>
+Integral<real_t, vector_t> backward_euler_harmonic_oscillator
+    ( real_t omega_0
+    , real_t zeta )
+{
+    return [=]
+        ( vector_t const &y
+        , real_t t_init
+        , real_t t_end ) -> vector_t
+    {
+        real_t h = t_end - t_init;
+        real_t d = 1 + 2*h*omega_0*zeta;
+        real_t q = y[0] / (1 + h * (1 - y[1] / d));
+        real_t p = (y[1] - h*omega_0*omega_0*q) / d;
+        return vector_t(q, p);
+    };
+}
+```
+
+This is entirely stable, but converges much slower than the 4th order Runge-Kutta method.
 
 ## Synthesis
 
@@ -343,6 +393,7 @@ namespace pint
 using namespace pint;
 
 <<harmonic-oscillator>>
+<<backward-euler-harmonic-oscillator>>
 
 template <typename real_t, typename vector_t>
 std::vector<vector_t> solve_iterative
@@ -417,8 +468,10 @@ int main(int argc, char **argv)
 
     auto ts = linspace<real_t>(0, 15.0, n);
     auto ode = harmonic_oscillator<real_t, vector_t>(omega0, zeta);
-    auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
-    auto fine = iterate_step<real_t, vector_t>(coarse, h); 
+    auto rk4 = runge_kutta_4<real_t, vector_t>(ode);
+    auto coarse = backward_euler_harmonic_oscillator<real_t, vector_t>(omega0, zeta);
+    // auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
+    auto fine = iterate_step<real_t, vector_t>(rk4, h); 
     auto y_0 = solve(coarse, vector_t(1.0, 0.0), ts);
 
     auto t_ref = linspace<real_t>(0, 15.0, 100);
