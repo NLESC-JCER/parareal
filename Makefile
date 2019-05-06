@@ -20,7 +20,7 @@ eigen_lflags = $(shell pkg-config --libs eigen3)
 eigen_cflags = $(shell pkg-config --cflags eigen3)
 
 # compile and link flags
-compile_flags = -O3 -std=c++17 -Wall -Werror $(eigen_cflags)
+compile_flags = -g -O3 -std=c++17 -Wall -Werror $(eigen_cflags) -I./include
 link_flags = $(fmt_lflags) $(eigen_lflags)
 
 # rules

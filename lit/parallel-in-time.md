@@ -273,7 +273,7 @@ ODE<real_t, vector_t> harmonic_oscillator
 {
     return [=] (real_t t, vector_t const &y) {
         return vector_t
-            ( y[1] 
+            ( y[1]
             , -2 * zeta * omega_0 * y[1] - omega_0*omega_0 * y[0] );
     };
 }
@@ -392,7 +392,7 @@ int main(int argc, char **argv)
          , { "h",      {"--h"}
            , "size of time step in fine integrator (default 0.01)", 1 }
         }};
-    
+
     argagg::parser_results args;
     try {
         args = argparser.parse(argc, argv);
@@ -418,7 +418,7 @@ int main(int argc, char **argv)
     auto ts = linspace<real_t>(0, 15.0, n);
     auto ode = harmonic_oscillator<real_t, vector_t>(omega0, zeta);
     auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
-    auto fine = iterate_step<real_t, vector_t>(coarse, h); 
+    auto fine = iterate_step<real_t, vector_t>(coarse, h);
     auto y_0 = solve(coarse, vector_t(1.0, 0.0), ts);
 
     auto t_ref = linspace<real_t>(0, 15.0, 100);
@@ -477,7 +477,7 @@ eigen_lflags = $(shell pkg-config --libs eigen3)
 eigen_cflags = $(shell pkg-config --cflags eigen3)
 
 # compile and link flags
-compile_flags = -O3 -std=c++17 -Wall -Werror $(eigen_cflags)
+compile_flags = -g -O3 -std=c++17 -Wall -Werror $(eigen_cflags) -I./include
 link_flags = $(fmt_lflags) $(eigen_lflags)
 
 # rules
