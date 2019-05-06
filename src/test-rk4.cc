@@ -25,6 +25,25 @@ ODE<real_t, vector_t> harmonic_oscillator
     };
 }
 // ------ end
+// ------ begin <<backward-euler-harmonic-oscillator>>[0]
+template <typename real_t, typename vector_t>
+Integral<real_t, vector_t> backward_euler_harmonic_oscillator
+    ( real_t omega_0
+    , real_t zeta )
+{
+    return [=]
+        ( vector_t const &y
+        , real_t t_init
+        , real_t t_end ) -> vector_t
+    {
+        real_t h = t_end - t_init;
+        real_t d = 1 + 2*h*omega_0*zeta;
+        real_t q = y[0] / (1 + h * (1 - y[1] / d));
+        real_t p = (y[1] - h*omega_0*omega_0*q) / d;
+        return vector_t(q, p);
+    };
+}
+// ------ end
 
 template <typename real_t, typename vector_t>
 std::vector<vector_t> solve_iterative
@@ -99,8 +118,10 @@ int main(int argc, char **argv)
 
     auto ts = linspace<real_t>(0, 15.0, n);
     auto ode = harmonic_oscillator<real_t, vector_t>(omega0, zeta);
-    auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
-    auto fine = iterate_step<real_t, vector_t>(coarse, h);
+    auto rk4 = runge_kutta_4<real_t, vector_t>(ode);
+    auto coarse = backward_euler_harmonic_oscillator<real_t, vector_t>(omega0, zeta);
+    // auto coarse = backward_euler<real_t, vector_t>(ode, 1e-6);
+    auto fine = iterate_step<real_t, vector_t>(rk4, h); 
     auto y_0 = solve(coarse, vector_t(1.0, 0.0), ts);
 
     auto t_ref = linspace<real_t>(0, 15.0, 100);
